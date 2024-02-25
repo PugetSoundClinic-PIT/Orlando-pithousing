@@ -1,3 +1,4 @@
+import csv
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome.service import Service
@@ -85,7 +86,7 @@ for row in table_rows[1:]:  # Skip the header row
     buyers = cells[8].text.strip()
     parcel_id = cells[9].text.strip()
     
-    # print
+    # Print
     print("Address:", address)
     print("Date Sold:", date_sold)
     print("Sale Amount:", sale_amount)
@@ -99,9 +100,12 @@ for row in table_rows[1:]:  # Skip the header row
     print()
  """
 # Function to extract data from the current page's table
-def extract_table_data(driver):
-    table_rows = table.find_elements(By.TAG_NAME, 'tr')
-    for row in table_rows[1:]:  # Skip the header row
+def extract_table_data(driver, writer):
+    tbody = WebDriverWait(driver, 10).until(
+    EC.presence_of_element_located((By.CSS_SELECTOR, "table.table-bordered tbody"))
+    )
+    table_rows = tbody.find_elements(By.TAG_NAME, 'tr')
+    for index, row in enumerate(table_rows[1:], start=1):        
         cells = row.find_elements(By.TAG_NAME, 'td')
         address = cells[0].text.strip()
         date_sold = cells[1].text.strip()
@@ -113,38 +117,40 @@ def extract_table_data(driver):
         sellers = cells[7].text.strip()
         buyers = cells[8].text.strip()
         parcel_id = cells[9].text.strip()
-        
-        # print
-        print("Address:", address)
-        print("Date Sold:", date_sold)
-        print("Sale Amount:", sale_amount)
-        print("Beds:", beds)
-        print("Bath:", bath)
-        print("SqFt:", sqft)
-        print("Year:", year)
-        print("Seller(s):", sellers)
-        print("Buyer(s):", buyers)
-        print("Parcel ID:", parcel_id)
-        print()
-page_count = 0        
-while True:
-    extract_table_data(driver)
-    # Locate the Next button by its aria-label
-    WebDriverWait(driver, 10).until(
-        EC.invisibility_of_element_located((By.CSS_SELECTOR, ".loader"))
-    )
-    next_button = WebDriverWait(driver, 10).until(
-        EC.element_to_be_clickable((By.XPATH, "//a[@aria-label='Next']"))
-    )
-    # Check if the Next button is disabled (indicating the last page)
-    if "disabled" in next_button.get_attribute("class"):
-        print("Reached the last page.")
-        break
-    
-    # If not disabled, click the Next button
-    next_button.click()
-    
-    # Wait for the next page to load
-    WebDriverWait(driver, 10).until(
-        EC.visibility_of_element_located((By.CLASS_NAME, 'table-bordered'))
-    )
+        # to csv
+        writer.writerow([address, date_sold, sale_amount, beds, bath, sqft, year, sellers, buyers, parcel_id])
+csv_file_path = '/Users/minhanhtruong/Desktop/Pit_housing/extracted_data.csv'
+with open(csv_file_path, mode='w', newline='', encoding='utf-8') as file:
+    writer = csv.writer(file)
+    # Write the header row
+    writer.writerow(['Address', 'Date Sold', 'Sale Amount', 'Beds', 'Bath', 'SqFt', 'Year', 'Seller(s)', 'Buyer(s)', 'Parcel ID'])
+    page_count = 0        
+    while True:
+        extract_table_data(driver, writer)
+        page_count +=1
+        if page_count == 3663:
+            break
+        try:
+            # Try to locate the Next button by its aria-label
+            WebDriverWait(driver, 10).until(
+                EC.invisibility_of_element_located((By.CSS_SELECTOR, ".loader"))
+            )
+            next_button = WebDriverWait(driver, 10).until(
+                EC.element_to_be_clickable((By.XPATH, "//a[@aria-label='Next']"))
+            )
+            # Check if the Next button is disabled (indicating the last page)
+            if "disabled" in next_button.get_attribute("class"):
+                print("Reached the last page.")
+                break
+            
+            # If not disabled, click the Next button
+            next_button.click()
+            
+            # Wait for the next page to load
+            WebDriverWait(driver, 10).until(
+                EC.visibility_of_element_located((By.CLASS_NAME, 'table-bordered'))
+            )
+        except (NoSuchElementException, TimeoutException):
+            # Handle cases where the Next button is not found or other exceptions
+            print("No Next button found or error clicking Next. Ending pagination.")
+            break
