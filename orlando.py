@@ -41,7 +41,7 @@ dropdown2 = WebDriverWait(driver, 10).until(
 )
 dropdown2.click()
 option = WebDriverWait(driver, 10).until(
-    EC.element_to_be_clickable((By.XPATH, "//option[contains(text(), 'Single-Family Residential')]"))
+    EC.element_to_be_clickable((By.XPATH, "//option[contains(text(), 'Vacant Residential Land')]"))
 )
 option.click()
 # In "Property Type", select "Select All"
@@ -80,16 +80,16 @@ def extract_table_data(driver, writer):
     # Find the table body
     tbody = soup.select_one("table.table-bordered tbody")
     # Iterate over each row in the table body
-    for row in tbody.find_all('tr')[1:]:  # Skip the first row assuming it's the header or adjust as necessary
+    for row in tbody.find_all('tr')[1:]:  # Skip the first row 
         # Extract text from each cell
         cells = [cell.get_text(strip=True) for cell in row.find_all('td')]
-        # Assuming cells align with your CSV columns; adjust indices if necessary
+
         if len(cells) >= 10:  # Ensure there are enough cells
             address, date_sold, sale_amount, beds, bath, sqft, year, sellers, buyers, parcel_id = cells[:10]
             # Write to CSV
             writer.writerow([address, date_sold, sale_amount, beds, bath, sqft, year, sellers, buyers, parcel_id])
 
-csv_file_path = '/Users/minhanhtruong/Desktop/Orlando-pithousing/extracted_data.csv'
+csv_file_path = '/Users/minhanhtruong/Desktop/Orlando-pithousing/Vacant-Residential.csv'
 with open(csv_file_path, mode='w', newline='', encoding='utf-8') as file:
     writer = csv.writer(file)
     # Write the header row
