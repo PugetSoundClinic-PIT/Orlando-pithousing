@@ -59,67 +59,37 @@ search_sales_button = WebDriverWait(driver, 10).until(
 )
 search_sales_button.click()
 
-""" # 100 results per page
+# 100 results per page
 results_per_page = WebDriverWait(driver, 10).until(
-    EC.visibility_of_element_located((By.ID, "pageSize"))
+    EC.element_to_be_clickable((By.ID, "pageSize"))
 )
+select = Select(results_per_page)
+select.select_by_visible_text("100")
 
-select_100 = Select(results_per_page)
-select_100.select_by_visible_text("100")
- """
-table = WebDriverWait(driver, 30).until(
-    EC.presence_of_all_elements_located((By.CLASS_NAME, 'table-bordered'))
-)[0]
+from bs4 import BeautifulSoup
 
-""" # Extract data from each row
-table_rows = table.find_elements(By.TAG_NAME, 'tr')
-for row in table_rows[1:]:  # Skip the header row
-    cells = row.find_elements(By.TAG_NAME, 'td')
-    address = cells[0].text.strip()
-    date_sold = cells[1].text.strip()
-    sale_amount = cells[2].text.strip()
-    beds = cells[3].text.strip()
-    bath = cells[4].text.strip()
-    sqft = cells[5].text.strip()
-    year = cells[6].text.strip()
-    sellers = cells[7].text.strip()
-    buyers = cells[8].text.strip()
-    parcel_id = cells[9].text.strip()
-    
-    # Print
-    print("Address:", address)
-    print("Date Sold:", date_sold)
-    print("Sale Amount:", sale_amount)
-    print("Beds:", beds)
-    print("Bath:", bath)
-    print("SqFt:", sqft)
-    print("Year:", year)
-    print("Seller(s):", sellers)
-    print("Buyer(s):", buyers)
-    print("Parcel ID:", parcel_id)
-    print()
- """
-# Function to extract data from the current page's table
 def extract_table_data(driver, writer):
-    tbody = WebDriverWait(driver, 10).until(
-    EC.presence_of_element_located((By.CSS_SELECTOR, "table.table-bordered tbody"))
+    # Wait for the table body to be present
+    WebDriverWait(driver, 200).until(
+        EC.presence_of_element_located((By.CSS_SELECTOR, "table.table-bordered tbody"))
     )
-    table_rows = tbody.find_elements(By.TAG_NAME, 'tr')
-    for index, row in enumerate(table_rows[1:], start=1):        
-        cells = row.find_elements(By.TAG_NAME, 'td')
-        address = cells[0].text.strip()
-        date_sold = cells[1].text.strip()
-        sale_amount = cells[2].text.strip()
-        beds = cells[3].text.strip()
-        bath = cells[4].text.strip()
-        sqft = cells[5].text.strip()
-        year = cells[6].text.strip()
-        sellers = cells[7].text.strip()
-        buyers = cells[8].text.strip()
-        parcel_id = cells[9].text.strip()
-        # to csv
-        writer.writerow([address, date_sold, sale_amount, beds, bath, sqft, year, sellers, buyers, parcel_id])
-csv_file_path = '/Users/minhanhtruong/Desktop/Pit_housing/extracted_data.csv'
+    # Get the HTML source of the current page
+    html_source = driver.page_source
+    # Parse the HTML using BeautifulSoup
+    soup = BeautifulSoup(html_source, 'html.parser')
+    # Find the table body
+    tbody = soup.select_one("table.table-bordered tbody")
+    # Iterate over each row in the table body
+    for row in tbody.find_all('tr')[1:]:  # Skip the first row assuming it's the header or adjust as necessary
+        # Extract text from each cell
+        cells = [cell.get_text(strip=True) for cell in row.find_all('td')]
+        # Assuming cells align with your CSV columns; adjust indices if necessary
+        if len(cells) >= 10:  # Ensure there are enough cells
+            address, date_sold, sale_amount, beds, bath, sqft, year, sellers, buyers, parcel_id = cells[:10]
+            # Write to CSV
+            writer.writerow([address, date_sold, sale_amount, beds, bath, sqft, year, sellers, buyers, parcel_id])
+
+csv_file_path = '/Users/minhanhtruong/Desktop/Orlando-pithousing/extracted_data.csv'
 with open(csv_file_path, mode='w', newline='', encoding='utf-8') as file:
     writer = csv.writer(file)
     # Write the header row
@@ -154,3 +124,6 @@ with open(csv_file_path, mode='w', newline='', encoding='utf-8') as file:
             # Handle cases where the Next button is not found or other exceptions
             print("No Next button found or error clicking Next. Ending pagination.")
             break
+
+
+# EXTRACTED 17924 ROWS
