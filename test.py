@@ -11,7 +11,7 @@ import time
 
 def setup_driver():
     options = Options()
-    chrome_driver_path = '/Users/minhanhtruong/desktop/pit_housing/chromedriver-mac-x64/chromedriver'  # Update this path
+    chrome_driver_path = '/Users/minhanhtruong/desktop/pit_housing/chromedriver-mac-x64/chromedriver'
     service = Service(executable_path=chrome_driver_path)
     driver = webdriver.Chrome(service=service, options=options)
     driver.get('https://ocpaweb.ocpafl.org/parcelsearch')
@@ -63,32 +63,22 @@ def navigate_and_select_options(driver):
 
 def get_total_rows(driver):
     tbody = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, "table.table-bordered tbody")))
-    return len(tbody.find_elements(By.TAG_NAME, 'tr')) - 1
+    return len(tbody.find_elements(By.TAG_NAME, 'tr'))
 
 def scrape_and_append_data(driver, index, csv_writer):
-    # Make sure the page is fully loaded and the table is present
     WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.CSS_SELECTOR, "table.table-bordered tbody")))
-    
-    # Target the link within the specified row's last cell
-    row_link_selector = f"table.table-bordered tbody tr:nth-of-type({index}) td a.a-link"
-    row_link = WebDriverWait(driver, 20).until(EC.element_to_be_clickable((By.CSS_SELECTOR, row_link_selector)))
-    row_link.click()  # Click on the link to navigate to the property's detailed page
-    
-    # Wait for the detailed page to load and then click on the "Property Features" tab
-    property_features_tab = WebDriverWait(driver, 20).until(EC.element_to_be_clickable((By.ID, "ngb-nav-6")))
-    driver.execute_script("arguments[0].click();", property_features_tab)
-    
-    # Wait for the content of the "Property Features" to be loaded
+    detail_links = driver.find_elements(By.CSS_SELECTOR, "table.table-bordered tbody tr td a.a-link")
+    detail_links[index - 1].click()
+    WebDriverWait(driver, 20).until(EC.element_to_be_clickable((By.ID, "ngb-nav-6"))).click()
     WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.CSS_SELECTOR, "div.propertyFeaturesForm")))
     detail_html = driver.page_source
     soup = BeautifulSoup(detail_html, 'html.parser')
-
     # Data extraction:
     # Extract Property Description 
-    property_description = soup.find('span', attrs={"_ngcontent-wtk-c92": True}, class="col-sm-12")
+    property_description = soup.find('span', attrs={"_ngcontent-wtk-c92": True}, class_="col-sm-12")
 
     # Extract Total Land Area 
-    land_area = soup.find('span', attrs={"_ngcontent-wtk-c92": True}, class="row")
+    land_area = soup.find('span', attrs={"_ngcontent-wtk-c92": True}, class_="row")
 
     # Other data is from table
     land_units = extract_value_from_table(soup, "Land Units")
@@ -111,15 +101,12 @@ def main():
 
     with open('scraped_data.csv', 'w', newline='', encoding='utf-8') as csvfile:
         csv_writer = csv.writer(csvfile)
-        # Writing headers
         csv_writer.writerow(['Property Description', 'Land Area', 'Land Unit', 'Unit Price', 'Land Value', 'Class Unit Price', 'Class Value'])
 
         for index in range(1, total_rows + 1):
             scrape_and_append_data(driver, index, csv_writer)
-            # Navigate back to the list after each scrape?
-            driver.back()
-            driver.back()
-            time.sleep(1)  # Adjust later?
+            driver.get('https://ocpaweb.ocpafl.org/parcelsearch')  # Navigate directly instead of using driver.back()
+            navigate_and_select_options(driver)  # Reapply filters for search
 
     driver.quit()
 
